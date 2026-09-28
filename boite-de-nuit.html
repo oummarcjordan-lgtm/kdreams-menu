@@ -49,6 +49,10 @@
   .paybtn.gold{background:var(--gold);color:#0D0D0D;border:none;}
   .empty{color:var(--muted);text-align:center;padding:30px 0;}
   .confirm{text-align:center;padding:20px 0;}
+  .cust{display:flex;flex-direction:column;gap:8px;margin:12px 0 4px;}
+  .cust input{width:100%;padding:12px;border-radius:10px;border:1px solid #2f3a33;background:#0D0D0D;color:var(--text);font-size:15px;}
+  .cust input:focus{outline:none;border-color:var(--gold);}
+  .cerr{color:#e06b6b;font-size:12px;min-height:16px;margin:2px 0 0 2px;}
   .confirm .big{color:var(--gold);font-size:17px;font-weight:700;margin-bottom:6px;}
 </style>
 </head>
@@ -70,6 +74,11 @@
 <div class="sheet" id="cartSheet">
   <h3>Ma commande</h3>
   <div id="cartLines"></div>
+  <div class="cust">
+    <input id="custName" type="text" placeholder="Nom pour la commande et la facture *" maxlength="40" autocomplete="off">
+    <input id="custPhone" type="tel" inputmode="tel" placeholder="Téléphone (facultatif)" maxlength="20" autocomplete="off">
+  </div>
+  <div class="cerr" id="custErr"></div>
   <div class="total"><span>Total</span><span id="cartTotal2">0 FCFA</span></div>
   <button class="paybtn gold" onclick="openPay()" id="toPayBtn">Choisir le mode de paiement</button>
 </div>
@@ -169,7 +178,17 @@ function updateCart(){
 function removeLine(key){ delete cart[key]; updateCart(); render(); }
 
 function openCart(){ closeAll(); document.getElementById('sheetBg').classList.add('show'); document.getElementById('cartSheet').classList.add('show'); }
-function openPay(){ document.getElementById('cartSheet').classList.remove('show'); document.getElementById('paySheet').classList.add('show'); }
+function openPay(){
+  const nm = document.getElementById('custName').value.trim();
+  if(nm.length < 2){
+    document.getElementById('custErr').textContent = 'Indiquez le nom à mettre sur la commande.';
+    document.getElementById('custName').focus();
+    return;
+  }
+  document.getElementById('custErr').textContent = '';
+  document.getElementById('cartSheet').classList.remove('show');
+  document.getElementById('paySheet').classList.add('show');
+}
 function closeAll(){ ['sheetBg','cartSheet','paySheet','confirmSheet'].forEach(id=>document.getElementById(id).classList.remove('show')); }
 
 function total(){ let t=0; Object.values(cart).forEach(c=>t+=(c.prix||0)*c.q); return t; }
@@ -192,6 +211,7 @@ async function pay(mode){
   const items = Object.values(cart).map(c=>({nom:c.nom, q:c.q, prix:(c.prix===null||c.prix===undefined)?null:c.prix}));
   const order = {
     etablissement:'kdreams', espace: ESPACE[ctx], table: TABLE, items: items,
+    customerName: document.getElementById('custName').value.trim(), customerPhone: document.getElementById('custPhone').value.trim(),
     total: total(), hasUnpriced: items.some(i=>i.prix===null),
     payMode: mode, status:'en_attente',
     createdAt: firebase.firestore.FieldValue.serverTimestamp(), createdMs: Date.now()
@@ -218,6 +238,8 @@ async function pay(mode){
     msg.textContent = 'Commande envoyée à la caisse. Réglez ' + amt + ' en espèces auprès du personnel.';
   }
   cart = {};
+  document.getElementById('custName').value = '';
+  document.getElementById('custPhone').value = '';
   updateCart();
   render();
 }

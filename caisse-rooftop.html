@@ -30,6 +30,8 @@
   .ord .h{display:flex;justify-content:space-between;align-items:baseline;}
   .ord .tb{color:var(--gold);font-weight:700;font-size:17px;}
   .ord .tm{color:var(--muted);font-size:12px;}
+  .ord .cl{margin-top:6px;font-size:14px;}
+  .ord .cl b{color:var(--gold);}
   .ord ul{list-style:none;padding:0;margin:10px 0;}
   .ord li{display:flex;justify-content:space-between;padding:5px 0;font-size:14px;border-bottom:1px dashed #2d4a3a;}
   .ord .tot{display:flex;justify-content:space-between;font-weight:700;color:var(--gold);font-size:16px;margin-top:8px;}
@@ -142,6 +144,7 @@ function draw(){
     const unpriced = o.hasUnpriced ? '<div class="warn">⚠️ Contient des articles sans prix — total à compléter</div>' : '';
     return '<div class="ord'+(newIds[o.id]?' new':'')+'">'
       + '<div class="h"><span class="tb">'+(o.table?('Table '+o.table):'Sans table')+'</span><span class="tm">'+t+'</span></div>'
+      + '<div class="cl">👤 <b>'+esc(o.customerName||'—')+'</b>'+(o.customerPhone?' · 📞 '+esc(o.customerPhone):'')+'</div>'
       + '<ul>'+lines+'</ul>'
       + '<div class="tot"><span>Total</span><span>'+money(o.total||0)+'</span></div>'
       + '<span class="pm">'+(PM[o.payMode]||o.payMode)+'</span>'+verify+unpriced
@@ -188,6 +191,7 @@ function facturePDF(o){
     d.text('Facture - ' + LABEL, 14, y); y+=6;
     d.setFontSize(9);
     d.text('Date : ' + new Date(o.createdMs||Date.now()).toLocaleString('fr-FR'), 14, y); y+=5;
+    d.text('Client : ' + (o.customerName||'-') + (o.customerPhone ? '   |   Tel : ' + o.customerPhone : ''), 14, y); y+=5;
     d.text((o.table?('Table : '+o.table):'Sans table') + '   |   Paiement : ' + (PM[o.payMode]||o.payMode), 14, y); y+=8;
     d.setDrawColor(200,200,200); d.line(14,y,W-14,y); y+=6;
     (o.items||[]).forEach(i=>{
