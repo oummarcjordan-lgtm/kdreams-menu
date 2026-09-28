@@ -129,12 +129,14 @@ function render(){
       row.appendChild(info);
       const qty = document.createElement('div'); qty.className='qty';
       const qv = cart[key] ? cart[key].q : 0;
-      qty.innerHTML = `<button onclick="chg('${key}',-1,'${nom.replace(/'/g,"\\'")}',${prix})">−</button><span id="q_${idx}_${cat.c.length}_${nom.length}">${qv}</span><button class="plus" onclick="chg('${key}',1,'${nom.replace(/'/g,"\\'")}',${prix})">+</button>`;
+      const bm = document.createElement('button'); bm.textContent = '−'; bm.onclick = ()=>chg(key,-1,nom,prix);
+      const sp = document.createElement('span'); sp.textContent = qv;
+      const bp = document.createElement('button'); bp.className = 'plus'; bp.textContent = '+'; bp.onclick = ()=>chg(key,1,nom,prix);
+      qty.appendChild(bm); qty.appendChild(sp); qty.appendChild(bp);
       row.appendChild(qty);
       el.appendChild(row);
     });
   });
-  DATA[ctx]._render = render;
 }
 
 function chg(key, d, nom, prix){
@@ -157,7 +159,10 @@ function updateCart(){
   if(count===0){ lines.innerHTML = '<div class="empty">Votre panier est vide</div>'; }
   Object.entries(cart).forEach(([key,c])=>{
     const d = document.createElement('div'); d.className='cline';
-    d.innerHTML = `<div class="cn">${c.nom} ×${c.q}</div><div class="cp">${c.prix?fmt(c.prix*c.q):'—'}</div><button class="rm" onclick="removeLine('${key}')">✕</button>`;
+    const cn = document.createElement('div'); cn.className='cn'; cn.textContent = c.nom + ' ×' + c.q;
+    const cp = document.createElement('div'); cp.className='cp'; cp.textContent = c.prix ? fmt(c.prix*c.q) : '—';
+    const rm = document.createElement('button'); rm.className='rm'; rm.textContent='✕'; rm.onclick = ()=>removeLine(key);
+    d.appendChild(cn); d.appendChild(cp); d.appendChild(rm);
     lines.appendChild(d);
   });
 }
