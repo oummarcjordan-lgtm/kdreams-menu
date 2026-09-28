@@ -88,7 +88,21 @@
   <button class="paybtn gold" onclick="closeAll()">Fermer</button>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAMbijp8xA3BLbaulDxZRzSh_jBNI8cqK8",
+  authDomain: "omba-p-lounge.firebaseapp.com",
+  projectId: "omba-p-lounge",
+  storageBucket: "omba-p-lounge.firebasestorage.app",
+  messagingSenderId: "469786469177",
+  appId: "1:469786469177:web:614e9c606f58ba79e6bee8"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const ESPACE = {"main": "hebergement"};
+const TABLE = parseInt(new URLSearchParams(location.search).get('table')) || null;
 const DATA = {"main": [{"c": "Appartement & Suite", "i": [["Appartement", 100000, "", null], ["Suite 106", 75000, "", null]]}, {"c": "Grandes Chambres", "i": [["Grande Chambre 204", 40000, "", null], ["Grande Chambre 201", 40000, "", null], ["Grande Chambre 101", 40000, "", null], ["Grande Chambre 104", 40000, "", null], ["Grande Chambre 108", 40000, "", null]]}, {"c": "Petites Chambres", "i": [["Petite Chambre 102", 30000, "", null], ["Petite Chambre 103", 30000, "", null], ["Petite Chambre 206", 30000, "", null], ["Petite Chambre 205", 30000, "", null], ["Petite Chambre 202", 30000, "", null], ["Petite Chambre 207", 30000, "", null], ["Petite Chambre 203", 30000, "", null], ["Petite Chambre 105 Rami", null, "", null]]}]};
 const PAY = {"main": {"mtn": {"type": "perso", "val": "673807918"}, "orange": {"type": "perso", "val": "657996671"}}};
 let ctx = "main";
@@ -167,27 +181,46 @@ function dialCode(mode){
   return '';
 }
 
-function pay(mode){
+async function pay(mode){
   if(Object.keys(cart).length===0){ return; }
+  const msg = document.getElementById('confirmMsg');
+  const items = Object.values(cart).map(c=>({nom:c.nom, q:c.q, prix:(c.prix===null||c.prix===undefined)?null:c.prix}));
+  const order = {
+    etablissement:'kdreams', espace: ESPACE[ctx], table: TABLE, items: items,
+    total: total(), hasUnpriced: items.some(i=>i.prix===null),
+    payMode: mode, status:'en_attente',
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(), createdMs: Date.now()
+  };
+  try{
+    await db.collection('kdreams_orders').add(order);
+  }catch(e){
+    document.getElementById('paySheet').classList.remove('show');
+    document.getElementById('confirmSheet').classList.add('show');
+    msg.textContent = "Impossible d'envoyer la commande (connexion). Réessayez ou présentez-vous à la caisse.";
+    return;
+  }
   document.getElementById('paySheet').classList.remove('show');
   document.getElementById('confirmSheet').classList.add('show');
-  const msg = document.getElementById('confirmMsg');
+  const amt = fmt(total());
   if(mode==='mtn' || mode==='orange'){
     const code = dialCode(mode);
-    msg.textContent = `Composez ${code} pour régler ${fmt(total())}. Présentez la confirmation à la caisse.`;
+    msg.textContent = 'Commande envoyée à la caisse. Composez ' + code + ' pour régler ' + amt + '.';
     const tel = 'tel:' + code.replace(/#/g,'%23');
-    setTimeout(()=>{ window.location.href = tel; }, 300);
+    setTimeout(()=>{ window.location.href = tel; }, 400);
   } else if(mode==='terminal'){
-    msg.textContent = `Réglez ${fmt(total())} par carte auprès du personnel.`;
+    msg.textContent = 'Commande envoyée à la caisse. Réglez ' + amt + ' par carte auprès du personnel.';
   } else {
-    msg.textContent = `Réglez ${fmt(total())} en espèces auprès du personnel.`;
+    msg.textContent = 'Commande envoyée à la caisse. Réglez ' + amt + ' en espèces auprès du personnel.';
   }
   cart = {};
   updateCart();
+  render();
 }
 
 
 
+if(TABLE){ document.querySelector('.sub').textContent += ' · Table ' + TABLE; }
+if(typeof switchTab==='function' && DATA.rooftop && TABLE>=21 && TABLE<=40){ switchTab('rooftop'); }
 render();
 updateCart();
 </script>
