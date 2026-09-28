@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>K-Dreams — Hébergement</title>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="icone-couronne-512.png">
+<link rel="apple-touch-icon" href="icone-couronne-512.png">
 <style>
   :root{
     --bg:#0D0D0D; --gold:#D4AF37; --card:#152A20; --text:#F1EFE8;
@@ -58,6 +61,7 @@
   /* Fond d'espace */
   body{--bgimg:url('bg-hebergement.jpg');}
   body::before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradient(rgba(0,0,0,0.7),rgba(0,0,0,0.84)),var(--bgimg) center/cover no-repeat;}
+  .htitle .logo-img{display:block;height:34px;width:auto;}
 </style>
 </head>
 <body>
@@ -65,7 +69,7 @@
   <header>
     <a class="back" href="index.html">&#8249;</a>
     <div class="htitle">
-      <div class="logo">K-DREAMS</div>
+      <img class="logo-img" src="logo-k-dreams-header.png" alt="K-Dreams">
       <div class="sub">Hébergement</div>
     </div>
   </header>
@@ -116,7 +120,7 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const ESPACE = {"main": "hebergement"};
 const TABLE = parseInt(new URLSearchParams(location.search).get('table')) || null;
-const DATA = {"main": [{"c": "Appartement & Suite", "i": [["Appartement", 100000, "", null], ["Suite 106", 75000, "", null]]}, {"c": "Grandes Chambres", "i": [["Grande Chambre 204", 40000, "", null], ["Grande Chambre 201", 40000, "", null], ["Grande Chambre 101", 40000, "", null], ["Grande Chambre 104", 40000, "", null], ["Grande Chambre 108", 40000, "", null]]}, {"c": "Petites Chambres", "i": [["Petite Chambre 102", 30000, "", null], ["Petite Chambre 103", 30000, "", null], ["Petite Chambre 206", 30000, "", null], ["Petite Chambre 205", 30000, "", null], ["Petite Chambre 202", 30000, "", null], ["Petite Chambre 207", 30000, "", null], ["Petite Chambre 203", 30000, "", null], ["Petite Chambre 105 Rami", null, "", null]]}]};
+const DATA = {"main": [{"c": "Nos chambres", "i": [["Chambre Lys", 20000, "", null], ["Chambre Jonquille", 25000, "", null], ["Suite Hortensia", 35000, "", null], ["Appartement Tournesol", 50000, "", null], ["Sieste — Petite chambre", 10000, "Séjour de 2 heures", null], ["Sieste — Grande chambre", 15000, "Séjour de 2 heures", null]]}]};
 const PAY = {"main": {"mtn": {"type": "perso", "val": "673807918"}, "orange": {"type": "perso", "val": "657996671"}}};
 let ctx = "main";
 let cart = {};
