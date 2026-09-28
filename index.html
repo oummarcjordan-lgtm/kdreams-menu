@@ -85,6 +85,10 @@
     border-radius: 20px;
     white-space: nowrap;
   }
+
+  /* Fond d'espace */
+  body{--bgimg:url('bg-accueil.jpg');}
+  body::before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradient(rgba(0,0,0,0.45),rgba(0,0,0,0.75)),var(--bgimg) center/cover no-repeat;}
 </style>
 </head>
 <body>

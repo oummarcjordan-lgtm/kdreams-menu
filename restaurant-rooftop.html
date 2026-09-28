@@ -54,6 +54,10 @@
   .cust input:focus{outline:none;border-color:var(--gold);}
   .cerr{color:#e06b6b;font-size:12px;min-height:16px;margin:2px 0 0 2px;}
   .confirm .big{color:var(--gold);font-size:17px;font-weight:700;margin-bottom:6px;}
+
+  /* Fond d'espace */
+  body{--bgimg:url('bg-restaurant.jpg');}
+  body::before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradient(rgba(0,0,0,0.7),rgba(0,0,0,0.84)),var(--bgimg) center/cover no-repeat;}
 </style>
 </head>
 <body>
@@ -244,7 +248,7 @@ async function pay(mode){
   render();
 }
 
-function switchTab(k){ ctx=k; document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active')); document.getElementById('tabbtn_'+k).classList.add('active'); render(); }
+function switchTab(k){ ctx=k; document.body.style.setProperty('--bgimg', k==='rooftop' ? "url('bg-rooftop.jpg')" : "url('bg-restaurant.jpg')"); document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active')); document.getElementById('tabbtn_'+k).classList.add('active'); render(); }
 
 if(TABLE){ document.querySelector('.sub').textContent += ' · Table ' + TABLE; }
 if(typeof switchTab==='function' && DATA.rooftop && TABLE>=21 && TABLE<=40){ switchTab('rooftop'); }
