@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>K-Dreams — Sélection</title>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="icone-couronne-512.png">
+<link rel="apple-touch-icon" href="icone-couronne-512.png">
 <style>
   body {
     margin: 0;
@@ -89,13 +92,13 @@
   /* Fond d'espace */
   body{--bgimg:url('bg-accueil.jpg');}
   body::before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradient(rgba(0,0,0,0.45),rgba(0,0,0,0.75)),var(--bgimg) center/cover no-repeat;}
+  .brand{display:block;width:170px;max-width:60%;height:auto;margin:0 auto;}
 </style>
 </head>
 <body>
   <div class="screen">
     <div class="header">
-      <div class="logo">K-DREAMS</div>
-      <div class="slogan">Drink · Eat · Rest</div>
+      <img class="brand" src="logo-k-dreams.png" alt="K-Dreams — Drink · Eat · Rest">
     </div>
     <div class="list">
       <a class="card" href="restaurant-rooftop.html">
