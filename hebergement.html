@@ -258,6 +258,12 @@ if(TABLE){ document.querySelector('.sub').textContent += ' · Table ' + TABLE; }
 if(typeof switchTab==='function' && DATA.rooftop && TABLE>=21 && TABLE<=40){ switchTab('rooftop'); }
 render();
 updateCart();
+
+db.collection('visits').add({
+  etablissement:'kdreams', location: ESPACE[ctx] || null, table: TABLE,
+  device: (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone===true) ? 'PWA' : 'Site web',
+  timestamp: firebase.firestore.FieldValue.serverTimestamp()
+}).catch(()=>{});
 </script>
 </body>
 </html>

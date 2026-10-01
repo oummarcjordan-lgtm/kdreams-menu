@@ -49,6 +49,7 @@
 <div class="login" id="login">
   <div class="logo">K-DREAMS</div>
   <div class="sub">Caisse · Hébergement</div>
+  <input id="cname" type="text" placeholder="Votre nom" maxlength="30" autocomplete="off" style="width:220px;text-align:center;font-size:17px;letter-spacing:normal;margin-bottom:12px;">
   <input id="pin" type="password" inputmode="numeric" maxlength="4" placeholder="••••" autocomplete="off">
   <button onclick="doLogin()">Entrer</button>
   <div class="err" id="err"></div>
@@ -104,18 +105,63 @@ function beep(){
   if(navigator.vibrate) navigator.vibrate([250,120,250]);
 }
 
+function detectDevice(){
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  return isStandalone ? 'PWA' : 'Site web';
+}
+const PRES_ID = 'kdreams_' + ESPACE;
+let presInterval = null;
+
+function logConnection(){
+  const cname = localStorage.getItem(NKEY) || LABEL;
+  db.collection('connections').add({
+    role: LABEL, cashierName: cname, device: detectDevice(), etablissement:'kdreams',
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+  }).catch(()=>{});
+}
+function presenceOnline(){
+  const cname = localStorage.getItem(NKEY) || LABEL;
+  db.collection('presence').doc(PRES_ID).set({
+    cashierName: cname, role: LABEL, etablissement:'kdreams', device: detectDevice(),
+    status:'online', loginAt: firebase.firestore.FieldValue.serverTimestamp(),
+    lastActive: firebase.firestore.FieldValue.serverTimestamp()
+  }, {merge:true}).catch(()=>{});
+}
+function presenceBeat(){
+  db.collection('presence').doc(PRES_ID).set({
+    status:'online', lastActive: firebase.firestore.FieldValue.serverTimestamp()
+  }, {merge:true}).catch(()=>{});
+}
+function presenceOffline(){
+  db.collection('presence').doc(PRES_ID).set({
+    status:'offline', loggedOutAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, {merge:true}).catch(()=>{});
+}
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden' && localStorage.getItem(SKEY)==='1') presenceOffline(); else if(document.visibilityState==='visible' && localStorage.getItem(SKEY)==='1') presenceOnline(); });
+window.addEventListener('beforeunload', ()=>{ if(localStorage.getItem(SKEY)==='1') presenceOffline(); });
+
+const NKEY = SKEY + '_name';
 function doLogin(){
+  const name = document.getElementById('cname').value.trim();
   const v = document.getElementById('pin').value.trim();
-  if(v === CODE){ localStorage.setItem(SKEY,'1'); start(); }
-  else { document.getElementById('err').textContent = 'Code incorrect'; }
+  if(name.length < 2){ document.getElementById('err').textContent = 'Indiquez votre nom'; return; }
+  if(v !== CODE){ document.getElementById('err').textContent = 'Code incorrect'; return; }
+  localStorage.setItem(SKEY,'1');
+  localStorage.setItem(NKEY, name);
+  start();
 }
 document.getElementById('pin').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
-function logout(){ localStorage.removeItem(SKEY); if(unsub) unsub(); location.reload(); }
+document.getElementById('cname').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('pin').focus(); });
+function logout(){ presenceOffline(); localStorage.removeItem(SKEY); localStorage.removeItem(NKEY); if(unsub) unsub(); location.reload(); }
 
 function start(){
   document.getElementById('login').style.display='none';
   document.getElementById('app').style.display='block';
   try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){}
+  logConnection();
+  presenceOnline();
+  if(presInterval) clearInterval(presInterval);
+  presInterval = setInterval(presenceBeat, 30000);
   unsub = db.collection('kdreams_orders').where('espace','==',ESPACE).onSnapshot(snap=>{
     if(!firstLoad){
       snap.docChanges().forEach(ch=>{ if(ch.type==='added' && !ch.doc.metadata.hasPendingWrites) { beep(); markNew(ch.doc.id); } });
@@ -123,7 +169,7 @@ function start(){
     firstLoad = false;
     orders = snap.docs.map(d=>({id:d.id, ...d.data()})).filter(o=>o.status==='en_attente');
     orders.sort((a,b)=>(a.createdMs||0)-(b.createdMs||0));
-    document.getElementById('status').textContent = 'En ligne · temps réel';
+    document.getElementById('status').textContent = (localStorage.getItem(NKEY) ? localStorage.getItem(NKEY) + ' · ' : '') + 'En ligne · temps réel';
     draw();
   }, err=>{
     document.getElementById('status').textContent = 'Erreur de connexion';
