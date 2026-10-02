@@ -24,12 +24,12 @@
   .tabs{display:flex;gap:8px;margin-bottom:18px;}
   .tab{flex:1;text-align:center;padding:10px;border-radius:10px;border:1px solid var(--gold);color:var(--gold);font-size:14px;font-weight:600;cursor:pointer;background:transparent;}
   .tab.active{background:var(--gold);color:#0D0D0D;}
-  .catnote{color:var(--muted);font-size:12px;margin:-6px 0 10px 2px;font-style:italic;}
+  .catnote{color:#bdbbb2;font-size:13px;margin:-6px 0 10px 2px;font-style:italic;}
   h2.cat{color:var(--gold);font-size:15px;font-weight:700;letter-spacing:.3px;margin:26px 0 10px;padding-bottom:6px;border-bottom:1px solid #2a2a26;}
   .item{display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-bottom:1px solid #1c1c19;}
   .item .info{flex:1;min-width:0;}
   .item .nom{font-size:15px;font-weight:500;color:var(--text);}
-  .item .ing{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.4;}
+  .item .ing{font-size:13px;color:#cfcdc4;margin-top:2px;line-height:1.4;}
   .item .prix{font-size:13px;color:var(--gold);margin-top:4px;font-weight:600;}
   .item .prix.na{color:var(--muted);font-style:italic;font-weight:400;}
   .qty{display:flex;align-items:center;gap:8px;flex-shrink:0;}
@@ -58,6 +58,21 @@
   .cerr{color:#e06b6b;font-size:12px;min-height:16px;margin:2px 0 0 2px;}
   .confirm .big{color:var(--gold);font-size:17px;font-weight:700;margin-bottom:6px;}
 
+  /* Recherche */
+  .searchbox{position:sticky;top:var(--safe-t);z-index:20;background:rgba(13,13,13,.94);margin:0 -16px 6px;padding:8px 16px 10px;}
+  .sfield{position:relative;}
+  .sfield input{width:100%;padding:12px 40px 12px 14px;border-radius:12px;border:1px solid var(--gold);background:#0D0D0D;color:var(--text);font-size:16px;-webkit-appearance:none;appearance:none;}
+  .sfield input::placeholder{color:#9a9890;}
+  .sfield input:focus{outline:none;box-shadow:0 0 0 2px rgba(212,175,55,.35);}
+  .sclear{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:32px;height:32px;border:none;background:none;color:var(--gold);font-size:18px;cursor:pointer;display:none;}
+  .sclear.show{display:block;}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+  .chip{padding:7px 14px;border-radius:20px;border:1px solid var(--gold);background:transparent;color:var(--gold);font-size:13px;cursor:pointer;}
+  .chip.on{background:var(--gold);color:#0D0D0D;font-weight:600;}
+  .sinfo{color:#bdbbb2;font-size:12px;margin-top:8px;}
+  .sinfo b{color:var(--gold);font-weight:600;}
+  .noresult{color:var(--muted);text-align:center;padding:36px 10px;line-height:1.5;}
+
   /* Fond d'espace */
   body{--bgimg:url('bg-cigare.jpg');}
   body::before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradient(rgba(0,0,0,0.7),rgba(0,0,0,0.84)),var(--bgimg) center/cover no-repeat;}
@@ -74,6 +89,14 @@
     </div>
   </header>
   
+  <div class="searchbox">
+    <div class="sfield">
+      <input id="q" type="search" placeholder="Rechercher (chicha, bière, whisky…)" autocomplete="off" enterkeyhint="search">
+      <button class="sclear" id="qClear" aria-label="Effacer" onclick="clearSearch()">&#10005;</button>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="sinfo" id="sinfo"></div>
+  </div>
   <div id="menu"></div>
 </div>
 
@@ -130,10 +153,15 @@ function fmt(n){ return n.toLocaleString('fr-FR') + ' FCFA'; }
 function render(){
   const el = document.getElementById('menu');
   el.innerHTML = '';
+  const qq = norm(document.getElementById('q').value);
+  let shown = 0;
   DATA[ctx].forEach(cat=>{
+    const list = cat.i.filter(it=>matches(qq, cat.c+' '+it[0]+' '+(it[2]||'')));
+    if(!list.length) return;
+    shown += list.length;
     const h = document.createElement('h2'); h.className='cat'; h.textContent = cat.c; el.appendChild(h);
     if(cat.n){ const nn=document.createElement('div'); nn.className='catnote'; nn.textContent=cat.n; el.appendChild(nn); }
-    cat.i.forEach((it,idx)=>{
+    list.forEach((it,idx)=>{
       const [nom, prix, ing, label] = it;
       const key = ctx+'|'+cat.c+'|'+nom;
       const row = document.createElement('div'); row.className='item';
@@ -154,7 +182,45 @@ function render(){
       el.appendChild(row);
     });
   });
+  if(!shown){ const nr=document.createElement('div'); nr.className='noresult'; nr.textContent='Aucun résultat pour « '+document.getElementById('q').value.trim()+' » dans ce menu.'; el.appendChild(nr); }
+  updateSearchInfo(shown, qq);
 }
+
+/* ---- Recherche ---- */
+const NOM_ESPACE = {main:'Espace cigare'};
+const SUGGESTIONS = [
+  {l:'Chicha', q:'chicha'}, {l:'Bière', q:'biere'}, {l:'Menu locaux', q:'terroir'},
+  {l:'Whisky', q:'whisky'}, {l:'Vin rouge', q:'vin rouge'}, {l:'Vin blanc', q:'vin blanc'}, {l:'Vin rosé', q:'vin rose'},
+  {l:'Champagne', q:'champagne'}, {l:'Liqueur', q:'liqueur'}, {l:'Cocktail', q:'cocktail'}, {l:'Cigare', q:'cigare'},
+  {l:'Softs', q:'soft'}, {l:'Pizza', q:'pizza'}, {l:'Grillades', q:'grille'}, {l:'Burger', q:'burger'}, {l:'Jeux', q:'jeux'}
+];
+function norm(s){ return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[’']/g,"'").trim(); }
+function matches(qq, hay){
+  if(!qq) return true;
+  const h = norm(hay);
+  return qq.split(/\s+/).every(t=>h.indexOf(t)!==-1);
+}
+function hasResults(qq){
+  return DATA[ctx].some(cat=>cat.i.some(it=>matches(qq, cat.c+' '+it[0]+' '+(it[2]||''))));
+}
+function buildChips(){
+  const cur = norm(document.getElementById('q').value);
+  const box = document.getElementById('chips'); box.innerHTML='';
+  SUGGESTIONS.forEach(s=>{
+    if(!hasResults(s.q)) return;               // pas de suggestion vide dans cet espace
+    const b = document.createElement('button'); b.className='chip'+(cur===s.q?' on':''); b.textContent=s.l;
+    b.onclick = ()=>{ const inp=document.getElementById('q'); inp.value = (cur===s.q ? '' : s.q); onSearch(); };
+    box.appendChild(b);
+  });
+}
+function updateSearchInfo(shown, qq){
+  const info = document.getElementById('sinfo');
+  info.innerHTML = 'Prix affichés : <b>'+NOM_ESPACE[ctx]+'</b>'+(TABLE?' · Table '+TABLE:'')+(qq?' · '+shown+' résultat'+(shown>1?'s':''):'');
+  document.getElementById('qClear').classList.toggle('show', !!qq);
+}
+function onSearch(){ render(); buildChips(); }
+function clearSearch(){ document.getElementById('q').value=''; onSearch(); }
+document.getElementById('q').addEventListener('input', onSearch);
 
 function chg(key, d, nom, prix){
   if(!cart[key]) cart[key] = {q:0, nom, prix};
@@ -257,6 +323,7 @@ async function pay(mode){
 if(TABLE){ document.querySelector('.sub').textContent += ' · Table ' + TABLE; }
 if(typeof switchTab==='function' && DATA.rooftop && TABLE>=21 && TABLE<=40){ switchTab('rooftop'); }
 render();
+buildChips();
 updateCart();
 
 db.collection('visits').add({
