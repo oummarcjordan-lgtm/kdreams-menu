@@ -62,6 +62,18 @@
   body{--bgimg:url('bg-hebergement.jpg');}
   body::before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradient(rgba(0,0,0,0.7),rgba(0,0,0,0.84)),var(--bgimg) center/cover no-repeat;}
   .htitle .logo-img{display:block;height:34px;width:auto;}
+
+  /* ===== Suivi des commandes ===== */
+  .mybtn{position:fixed;left:16px;bottom:calc(18px + var(--safe-b));background:var(--card);color:var(--gold);border:1px solid var(--gold);border-radius:30px;padding:13px 16px;font-weight:700;font-size:13px;z-index:25;display:none;cursor:pointer;}
+  .mybtn.show{display:block;}
+  .mo{border:1px solid #2a2a26;border-radius:12px;padding:12px;margin-top:10px;background:rgba(255,255,255,.03);}
+  .mo .t{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted);}
+  .mo .it{font-size:14px;margin:6px 0;color:var(--text);line-height:1.4;}
+  .mo .st{font-size:14px;font-weight:700;}
+  .mo .st.ok{color:#6fcf97;} .mo .st.ko{color:#eb7b7b;} .mo .st.wait{color:var(--gold);}
+  .mo .mt{font-size:12px;color:var(--muted);margin-top:3px;}
+  .mo .cx{margin-top:8px;padding:8px 12px;border-radius:10px;border:1px solid var(--danger);background:transparent;color:#eb7b7b;font-size:13px;font-weight:600;cursor:pointer;}
+  .sheet.tall{max-height:80vh;overflow-y:auto;}
 </style>
 </head>
 <body>
@@ -78,6 +90,7 @@
 </div>
 
 <button class="cartbtn" id="cartBtn" onclick="openCart()">&#128722; <span id="cartCount">0</span> · <span id="cartTotal">0 FCFA</span></button>
+<button class="mybtn" id="myBtn" onclick="openOrders()"></button>
 <div class="sheet-bg" id="sheetBg" onclick="closeAll()"></div>
 <div class="sheet" id="cartSheet">
   <h3>Ma commande</h3>
@@ -102,9 +115,15 @@
     <div class="big">Commande enregistrée</div>
     <div id="confirmMsg" style="color:var(--muted);font-size:13px;line-height:1.5;"></div>
   </div>
+  <button class="paybtn" onclick="openOrders()">Suivre mes commandes</button>
   <button class="paybtn gold" onclick="closeAll()">Fermer</button>
 </div>
 
+<div class="sheet tall" id="ordersSheet">
+  <h3>Mes commandes</h3>
+  <div id="myList"></div>
+  <button class="paybtn gold" onclick="closeAll()">Fermer</button>
+</div>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
@@ -118,6 +137,76 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+
+/* ===== Suivi des commandes du client ===== */
+const MYKEY='kd_my_orders_v1', MYTTL=12*3600*1000;
+let myOrders=[]; const myUnsubs={}; const myState={};
+function loadMy(){ try{ myOrders=JSON.parse(localStorage.getItem(MYKEY)||'[]').filter(o=>Date.now()-o.ms<MYTTL); }catch(e){ myOrders=[]; } }
+function saveMy(){ try{ localStorage.setItem(MYKEY, JSON.stringify(myOrders)); }catch(e){} }
+function trackOrder(id, order){
+  try{
+    myOrders.unshift({id:id, ms:Date.now(), espace:order.espace||'', total:order.total||0,
+      items:order.items.map(i=>i.nom+' \u00d7'+i.q), unpriced:!!order.hasUnpriced});
+    saveMy(); watchOrder(id); refreshMyBtn();
+  }catch(e){}
+}
+function watchOrder(id){
+  if(myUnsubs[id]) return;
+  myUnsubs[id] = db.collection('kdreams_orders').doc(id).onSnapshot(async snap=>{
+    if(snap.exists){ myState[id]={s:'attente'}; }
+    else if(myState[id] && myState[id].s==='annulee_client'){ /* deja connu */ }
+    else {
+      try{
+        const q = await db.collection('kdreams_archive').where('orderId','==',id).limit(1).get();
+        if(!q.empty){ const d=q.docs[0].data(); myState[id]={s:(d.orderStatus==='annulee'?'annulee':'validee'), motif:d.motif||''}; }
+        else myState[id]={s:'traitee'};
+      }catch(e){ myState[id]={s:'traitee'}; }
+      if(myUnsubs[id]){ myUnsubs[id](); delete myUnsubs[id]; }
+    }
+    renderMy();
+  }, ()=>{});
+}
+function refreshMyBtn(){
+  const b=document.getElementById('myBtn'); if(!b) return;
+  b.classList.toggle('show', myOrders.length>0);
+  b.textContent = '\ud83e\uddfe Mes commandes (' + myOrders.length + ')';
+}
+function renderMy(){
+  refreshMyBtn();
+  const box=document.getElementById('myList'); if(!box) return;
+  box.innerHTML='';
+  if(!myOrders.length){ box.innerHTML='<div class="empty">Aucune commande pour le moment</div>'; return; }
+  myOrders.forEach(o=>{
+    const st=myState[o.id]||{s:'attente'};
+    const d=document.createElement('div'); d.className='mo';
+    const t=document.createElement('div'); t.className='t';
+    const a=document.createElement('span'); a.textContent=(o.espace||'Commande')+' \u00b7 '+new Date(o.ms).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+    const b=document.createElement('span'); b.textContent=o.unpriced?'Prix \u00e0 confirmer':fmt(o.total);
+    t.appendChild(a); t.appendChild(b);
+    const it=document.createElement('div'); it.className='it'; it.textContent=o.items.join(', ');
+    const s=document.createElement('div'); s.className='st';
+    if(st.s==='attente'){ s.classList.add('wait'); s.textContent='\u23f3 En attente de la caisse'; }
+    else if(st.s==='validee'){ s.classList.add('ok'); s.textContent='\u2705 Servie et pay\u00e9e'; }
+    else if(st.s==='annulee'){ s.classList.add('ko'); s.textContent='\u274c Annul\u00e9e par la caisse'; }
+    else if(st.s==='annulee_client'){ s.classList.add('ko'); s.textContent='\u274c Annul\u00e9e par vous'; }
+    else { s.textContent='Trait\u00e9e par la caisse'; }
+    d.appendChild(t); d.appendChild(it); d.appendChild(s);
+    if(st.s==='annulee' && st.motif){ const m=document.createElement('div'); m.className='mt'; m.textContent='Motif : '+st.motif; d.appendChild(m); }
+    if(st.s==='attente'){ const c=document.createElement('button'); c.className='cx'; c.textContent='Annuler cette commande'; c.onclick=()=>cancelMine(o.id); d.appendChild(c); }
+    box.appendChild(d);
+  });
+}
+async function cancelMine(id){
+  if(!confirm('Annuler cette commande ?')) return;
+  try{
+    myState[id]={s:'annulee_client'};
+    await db.collection('kdreams_orders').doc(id).delete();
+  }catch(e){ delete myState[id]; alert("Impossible d'annuler. Pr\u00e9sentez-vous \u00e0 la caisse."); }
+  renderMy();
+}
+function openOrders(){ closeAll(); renderMy(); document.getElementById('sheetBg').classList.add('show'); document.getElementById('ordersSheet').classList.add('show'); }
+loadMy(); myOrders.forEach(o=>watchOrder(o.id));
+
 const ESPACE = {"main": "hebergement"};
 const TABLE = parseInt(new URLSearchParams(location.search).get('table')) || null;
 const DATA = {"main": [{"c": "Nos chambres", "i": [["Chambre Lys", 20000, "", null], ["Chambre Jonquille", 25000, "", null], ["Suite Hortensia", 35000, "", null], ["Appartement Tournesol", 50000, "", null], ["Sieste — Petite chambre", 10000, "Séjour de 2 heures", null], ["Sieste — Grande chambre", 15000, "Séjour de 2 heures", null]]}]};
@@ -197,7 +286,7 @@ function openPay(){
   document.getElementById('cartSheet').classList.remove('show');
   document.getElementById('paySheet').classList.add('show');
 }
-function closeAll(){ ['sheetBg','cartSheet','paySheet','confirmSheet'].forEach(id=>document.getElementById(id).classList.remove('show')); }
+function closeAll(){ ['sheetBg','cartSheet','paySheet','confirmSheet','ordersSheet'].forEach(id=>document.getElementById(id).classList.remove('show')); }
 
 function total(){ let t=0; Object.values(cart).forEach(c=>t+=(c.prix||0)*c.q); return t; }
 
@@ -225,7 +314,7 @@ async function pay(mode){
     createdAt: firebase.firestore.FieldValue.serverTimestamp(), createdMs: Date.now()
   };
   try{
-    await db.collection('kdreams_orders').add(order);
+    const ref = await db.collection('kdreams_orders').add(order); trackOrder(ref.id, order);
   }catch(e){
     document.getElementById('paySheet').classList.remove('show');
     document.getElementById('confirmSheet').classList.add('show');
@@ -259,6 +348,7 @@ if(typeof switchTab==='function' && DATA.rooftop && TABLE>=21 && TABLE<=40){ swi
 render();
 updateCart();
 
+refreshMyBtn();
 db.collection('visits').add({
   etablissement:'kdreams', location: ESPACE[ctx] || null, table: TABLE,
   device: (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone===true) ? 'PWA' : 'Site web',

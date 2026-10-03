@@ -207,7 +207,7 @@ function draw(){
 }
 
 async function archiver(o, statut, motif){
-  const data = {...o}; delete data.id;
+  const data = {...o}; delete data.id; data.orderId = o.id;
   data.orderStatus = statut; data.closedMs = Date.now();
   data.closedAt = firebase.firestore.FieldValue.serverTimestamp();
   if(motif) data.motif = motif;
