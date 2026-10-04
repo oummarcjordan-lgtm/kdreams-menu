@@ -16,7 +16,7 @@
   .login{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;}
   .login .logo{color:var(--gold);font-size:26px;font-weight:700;letter-spacing:1px;}
   .login .sub{color:var(--muted);margin:6px 0 26px;font-size:14px;}
-  .login input{width:180px;text-align:center;font-size:26px;letter-spacing:10px;padding:12px;border-radius:12px;border:1px solid var(--gold);background:#111310;color:var(--text);}
+  .login input{width:230px;text-align:center;font-size:26px;letter-spacing:8px;padding:12px;border-radius:12px;border:1px solid var(--gold);background:#111310;color:var(--text);}
   .login button{margin-top:16px;width:180px;padding:13px;border-radius:12px;border:none;background:var(--gold);color:#0D0D0D;font-weight:700;font-size:15px;}
   .err{color:#e06b6b;font-size:13px;margin-top:10px;min-height:16px;}
   #app{display:none;}
@@ -52,7 +52,7 @@
   <div class="logo">K-DREAMS</div>
   <div class="sub">Caisse · Rooftop</div>
   <input id="cname" type="text" placeholder="Votre nom" maxlength="30" autocomplete="off" style="width:220px;text-align:center;font-size:17px;letter-spacing:normal;margin-bottom:12px;">
-  <input id="pin" type="password" inputmode="numeric" maxlength="4" placeholder="••••" autocomplete="off">
+  <input id="pin" type="password" inputmode="numeric" maxlength="8" placeholder="• • • •" autocomplete="off">
   <button onclick="doLogin()">Entrer</button>
   <div class="err" id="err"></div>
 </div>
